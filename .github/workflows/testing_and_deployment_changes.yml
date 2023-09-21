@@ -1,12 +1,13 @@
 name: Testing and deployment changes
 
-on: workflow_dispatch
-  # push:
-  #   branches:
-  #     - main
+# on: workflow_dispatch
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  testing:
+  testing_and_deployment_changes:
     runs-on: ubuntu-22.04
     env:
       SECRET_KEY: 'django-insecure-9m2%u2yq=+#)6c#^j7^1p+@mpiob-r)9ki+zrv%*ad779fz89l'
