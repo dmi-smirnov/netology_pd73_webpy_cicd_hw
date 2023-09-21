@@ -22,4 +22,3 @@ def test_get_products():
     # Assert
     assert resp.status_code == status.HTTP_200_OK
     assert resp.data['count'] == len(products)
-
