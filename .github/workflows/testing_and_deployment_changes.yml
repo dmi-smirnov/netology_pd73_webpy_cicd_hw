@@ -1,0 +1,80 @@
+name: Testing and deployment changes
+
+on: workflow_dispatch
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  testing:
+    runs-on: ubuntu-22.04
+    env:
+      SECRET_KEY: 'django-insecure-9m2%u2yq=+#)6c#^j7^1p+@mpiob-r)9ki+zrv%*ad779fz89l'
+      DEBUG: '0'
+      ALLOWED_HOSTS: '127.0.0.1'
+      DATABASE_ENGINE: 'django.db.backends.postgresql'
+      DATABASE_HOST: '127.0.0.1'
+      DATABASE_PORT: '5432'
+      DATABASE_USER: 'test_user'
+      DATABASE_PASSWORD: 'test_pwd'
+      DATABASE_NAME: 'test_db'
+    services:
+      dbms:
+        image: postgres:14
+        env:
+          POSTGRES_DB: ${{ env.DATABASE_NAME }}
+          POSTGRES_USER: ${{ env.DATABASE_USER }}
+          POSTGRES_PASSWORD: ${{ env.DATABASE_PASSWORD }}
+        ports:
+          - 5432:5432
+        options:
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checking the repository for changes
+        uses: actions/checkout@v4
+
+      - name: Installing Python
+        uses: action/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Installing python packages
+        run: pip install -r requirements-dev.txt
+
+      - name: Linting
+        run: flake8 . --exclude ./*/migrations
+
+      - name: Testing
+        run: pytest
+        env:
+          SECRET_KEY: ${{ env.SECRET_KEY }}
+          DEBUG: ${{ env.DEBUG }}
+          ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
+          DATABASE_ENGINE: ${{ env.DATABASE_ENGINE }}
+          DATABASE_HOST: ${{ env.DATABASE_HOST }}
+          DATABASE_PORT: ${{ env.DATABASE_PORT }}
+          DATABASE_USER: ${{ env.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ env.DATABASE_PASSWORD }}
+          DATABASE_NAME: ${{ env.DATABASE_NAME }}
+
+      - name: Changes deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ./netology_pd75_webpy_cicd_hw
+            git pull
+            source ./venv/bin/activate
+            pip install -r requirements.txt
+            python manage.py makemigrations logistic
+            python manage.py migrate
+            sudo systemctl restart gunicorn_netology_pd75_webpy_cicd_hw.service
+
+
+
+
